@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{CC5FD16D-436D-48AD-A40C-5A424C6E3E79}") = "EDMAPI", "EDMAPI.ccproj", "{ABEA7B29-ECD9-4022-9A35-E3CD1BDABAB9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EDMApiWebRole", "EDMApiWebRole\EDMApiWebRole.csproj", "{D72C455E-20DB-4F61-A6D2-EB0D66DEB3F4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ABEA7B29-ECD9-4022-9A35-E3CD1BDABAB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABEA7B29-ECD9-4022-9A35-E3CD1BDABAB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABEA7B29-ECD9-4022-9A35-E3CD1BDABAB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ABEA7B29-ECD9-4022-9A35-E3CD1BDABAB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D72C455E-20DB-4F61-A6D2-EB0D66DEB3F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D72C455E-20DB-4F61-A6D2-EB0D66DEB3F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D72C455E-20DB-4F61-A6D2-EB0D66DEB3F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D72C455E-20DB-4F61-A6D2-EB0D66DEB3F4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
