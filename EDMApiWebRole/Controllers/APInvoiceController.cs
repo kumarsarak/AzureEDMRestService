@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Web.Mvc;
+using System.Web.Http.Description;
 using EDMApiWebRole.Models;
 using System.Diagnostics;
 using System.Configuration;
@@ -13,42 +14,92 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace EDMApiWebRole.Controllers
 {
+    
     public class APInvoiceController : ApiController
     {
         private APAppDBContext db = new APAppDBContext();
 
-        [System.Web.Http.HttpPost]
-        public String Create(string recordnumber, string invoicedate, string invoicenumber, string vendornumber, string vendorname, string ponumber, string invoicetypecd, string filelocation, string invoiceimagename)
+        
+        /*public HttpResponseMessage GetAPInvoice(string recordnumber)
         {
-            String returnvalue;
-            bool insertsuccess = false;
             try
             {
-                if (!String.IsNullOrEmpty(recordnumber) && !String.IsNullOrEmpty(invoicenumber))
+                if (!String.IsNullOrEmpty(recordnumber) && db.APInvoices.Single(x => x.Record_Number == recordnumber) != null)
                 {
-                    var apinvoicerecord = new APInvoice { Record_Number = recordnumber, Invoice_Date = Convert.ToDateTime(invoicedate), Invoice_Number = invoicenumber, Vendor_Number = vendornumber, Vendor_Name = vendorname, PO_Number = ponumber, Invoice_Type_cd = invoicetypecd };
-                    db.APInvoices.Add(apinvoicerecord);
-                    db.SaveChanges();
-                    insertsuccess = true;
+                    
+                   var apinvoicerecord = db.APInvoices.Single(x => x.Record_Number == recordnumber);
+                    return Request.CreateResponse<APInvoice>(HttpStatusCode.OK, apinvoicerecord);
                 }
-                returnvalue = "AP MetaData succesfully Added;";
+                else
+                {
+                    throw new HttpResponseException(HttpStatusCode.NotFound);
+                }
+
+                
 
             }
             catch (Exception ex)
             {
-                DeleteMetadata(recordnumber);
-                returnvalue = "AP Metadata not saved due to exceptions";
-                return returnvalue;
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
             }
 
-            returnvalue = returnvalue + InsertInvoiceIntoBlob(recordnumber, filelocation, invoiceimagename, insertsuccess);
-            return returnvalue;
+
+        }*/
+
+        [System.Web.Http.ActionName("Metadata")]
+        public HttpResponseMessage PostAPInvoice(string recordnumber, string invoicedate, string invoicenumber, string vendornumber, string vendorname, string ponumber, string invoicetypecd)
+        {
+            try
+            {
+                if (!String.IsNullOrEmpty(recordnumber) && !String.IsNullOrEmpty(invoicenumber))
+                {
+                    if (db.APInvoices.Count(x => x.Record_Number == recordnumber) > 0) { return Request.CreateResponse(HttpStatusCode.Conflict); }
+                    var apinvoicerecord = new APInvoice { Record_Number = recordnumber, Invoice_Date = Convert.ToDateTime(invoicedate), Invoice_Number = invoicenumber, Vendor_Number = vendornumber, Vendor_Name = vendorname, PO_Number = ponumber, Invoice_Type_cd = invoicetypecd };
+                    db.APInvoices.Add(apinvoicerecord);
+                    db.SaveChanges();
+                    
+                    return Request.CreateResponse<APInvoice>(HttpStatusCode.Created, apinvoicerecord);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
+            }
+            
+            
         }
 
-        [System.Web.Http.HttpPost]
-        public String Update(string recordnumber, string invoicedate, string invoicenumber, string vendornumber, string vendorname, string ponumber, string invoicetypecd, string filelocation, string invoiceimagename)
+        [System.Web.Http.ActionName("Metadata")]
+        public HttpResponseMessage DeleteAPInvoice(string recordnumber)
         {
-            String returnvalue;
+            try
+            {
+                if (!String.IsNullOrEmpty(recordnumber) && db.APInvoices.Single(x => x.Record_Number == recordnumber) != null)
+                {
+                    db.APInvoices.Remove(db.APInvoices.Single(x => x.Record_Number == recordnumber));
+                    db.SaveChanges();
+                    return Request.CreateResponse(HttpStatusCode.OK);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
+            }
+        }
+
+        /* [System.Web.Http.ActionName("UpdateMetadata")]
+       public HttpResponseMessage PutAPInvoice(string recordnumber, string invoicedate, string invoicenumber, string vendornumber, string vendorname, string ponumber, string invoicetypecd)
+        {
             try
             {
                 if (!String.IsNullOrEmpty(recordnumber))
@@ -67,11 +118,11 @@ namespace EDMApiWebRole.Controllers
                     DeleteMetadata(recordnumber);
                     db.APInvoices.Add(apinvoicerecord);
                     db.SaveChanges();
-                    returnvalue = "AP MetaData succesfully Updated";
+                    return Request.CreateResponse(HttpStatusCode.OK);
                 }
                 else
                 {
-                    returnvalue = "AP MetaData not Updated as the recordnumber is empty";
+                    throw new HttpResponseException(HttpStatusCode.NotFound);
 
                 }
                  
@@ -79,69 +130,86 @@ namespace EDMApiWebRole.Controllers
             catch (Exception ex)
             {
                 DeleteMetadata(recordnumber);
-                returnvalue = "AP Metadata not updated due to exceptions";
-                return returnvalue;
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
             }
+        }*/
 
-            return returnvalue;
-
-        }
-
-        private String InsertInvoiceIntoBlob(string recordnumber, string filelocation, string invoiceimagename, bool insertsuccess)
+        [System.Web.Http.ActionName("Image")]
+        public HttpResponseMessage PostAPInvoiceImage(string recordnumber, string filepath)
         {
             try
             {
-                
-                if (insertsuccess)
+                if (!String.IsNullOrEmpty(recordnumber) && (!String.IsNullOrEmpty(filepath)))
                 {
+                    if (GetBlockBlob(recordnumber).Exists())
+                    {
+                        return Request.CreateResponse(HttpStatusCode.Conflict);
+                    }
+
                     // Retrieve reference to a blob named "blobName".
                     CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
-                    // Create or overwrite the "blobName" blob with contents from a local file.
-                    using (var fileStream = System.IO.File.OpenRead(filelocation))
+
+                    HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(filepath);
+
+                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                     {
-                        // Set content type accordingly
-                        if (invoiceimagename.ToLower().EndsWith(".pdf"))
+                        if (filepath.ToLower().EndsWith(".pdf"))
                         {
                             blockBlob.Properties.ContentType = "application/pdf";
                         }
-                        else if (invoiceimagename.ToLower().EndsWith(".tif"))
+                        else if (filepath.ToLower().EndsWith(".tif"))
                         {
                             blockBlob.Properties.ContentType = "image/tiff";
                         }
-                        //Upload the image
-                        blockBlob.UploadFromStream(fileStream);
+                        else if (filepath.ToLower().EndsWith(".png"))
+                        {
+                            blockBlob.Properties.ContentType = "image/png";
+                        }
+                        else if (filepath.ToLower().EndsWith(".jpg"))
+                        {
+                            blockBlob.Properties.ContentType = "image/jpeg";
+                        }
+
+                        blockBlob.UploadFromStream(response.GetResponseStream());
                     }
 
-                    return "AP Invoice Image successfully saved";
+                    return Request.CreateResponse(HttpStatusCode.Created);
                 }
                 else
                 {
-                    return "AP Invoice Image not Saved due to errors in Metadata";
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
+            }
+
+        }
+
+
+        [System.Web.Http.ActionName("Image")]
+        public HttpResponseMessage DeleteImage(string recordnumber)
+        {
+            try
+            {
+                if (!String.IsNullOrEmpty(recordnumber) && GetBlockBlob(recordnumber).Exists())
+                {
+                    CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
+                    blockBlob.Delete();
+                    return Request.CreateResponse(HttpStatusCode.OK);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+
                 }
             }
             catch (Exception ex)
             {
-                DeleteMetadata(recordnumber);
-                DeleteImage(recordnumber);
-                return "AP Invoice Image and Metadata not saved due to exceptions";
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
             }
-            
-        }
-
-        private void DeleteMetadata(string recordnumber)
-        {
-            if (!String.IsNullOrEmpty(db.APInvoices.Single(x => x.Record_Number == recordnumber).Record_Number))
-            {
-                db.APInvoices.Remove(db.APInvoices.Single(x => x.Record_Number == recordnumber));
-                db.SaveChanges();
-            }
-
-        }
-
-        private void DeleteImage(string recordnumber)
-        {
-            CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
-            blockBlob.Delete();
 
         }
 

@@ -17,38 +17,59 @@ namespace EDMApiWebRole.Controllers
     {
         private ARAppDBContext db = new ARAppDBContext();
 
-        [System.Web.Http.HttpPost]
-        public String Create(string recordnumber, string checkdepositdate, string checkserialnum, string checktransitnum, string checkaccountnum, string lockbox, string hasactionitem, string lawsoncustomer, string filelocation, string checkimagename)
+        [System.Web.Http.ActionName("Metadata")]
+        public HttpResponseMessage PostARCustRemit(string recordnumber, string checkdepositdate, string checkserialnum, string checktransitnum, string checkaccountnum, string lockbox, string hasactionitem, string lawsoncustomer)
         {
-            String returnvalue;
-            bool insertsuccess = false;
+            
             try
             {
                 if (!String.IsNullOrEmpty(recordnumber) && !String.IsNullOrEmpty(checkaccountnum))
                 {
+                    if (db.ARCustRemits.Count(x => x.Record_Number == recordnumber) > 0) { return Request.CreateResponse(HttpStatusCode.Conflict); }
                     var arcustomerremitrecord = new ARCustRemit { Record_Number = recordnumber, Chk_Deposit_Dt = Convert.ToDateTime(checkdepositdate), Chk_Serial_Num = checkserialnum, Chk_Transit_Num = checktransitnum, Chk_Account_Num = checkaccountnum, Lockbox = lockbox, Has_Action_Item = hasactionitem, Lawson_Customer = lawsoncustomer };
                     db.ARCustRemits.Add(arcustomerremitrecord);
                     db.SaveChanges();
-                    insertsuccess = true;
+                    return Request.CreateResponse<ARCustRemit>(HttpStatusCode.Created, arcustomerremitrecord);
                 }
-                returnvalue = "AR MetaData succesfully Added;";
-
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                }
+                
             }
             catch (Exception ex)
             {
-                DeleteMetadata(recordnumber);
-                returnvalue = "AR Metadata not saved due to exceptions";
-                return returnvalue;
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
             }
 
-            returnvalue = returnvalue + InsertCheckIntoBlob(recordnumber, filelocation, checkimagename, insertsuccess);
-            return returnvalue;
         }
 
-        [System.Web.Http.HttpPost]
-        public String Update(string recordnumber, string checkdepositdate, string checkserialnum, string checktransitnum, string checkaccountnum, string lockbox, string hasactionitem, string lawsoncustomer)
+        [System.Web.Http.ActionName("Metadata")]
+        public HttpResponseMessage DeleteARCustRemit(string recordnumber)
         {
-            String returnvalue;
+            try
+            {
+                if (!String.IsNullOrEmpty(recordnumber) && db.ARCustRemits.Single(x => x.Record_Number == recordnumber) != null)
+                {
+                    db.ARCustRemits.Remove(db.ARCustRemits.Single(x => x.Record_Number == recordnumber));
+                    db.SaveChanges();
+                    return Request.CreateResponse(HttpStatusCode.OK);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
+            }
+        }
+
+        /*[System.Web.Http.ActionName("UpdateMetadata")]
+        public HttpResponseMessage PutARCustRemit(string recordnumber, string checkdepositdate, string checkserialnum, string checktransitnum, string checkaccountnum, string lockbox, string hasactionitem, string lawsoncustomer)
+        {
             try
             {
                 if (!String.IsNullOrEmpty(recordnumber))
@@ -68,11 +89,11 @@ namespace EDMApiWebRole.Controllers
                     DeleteMetadata(recordnumber);
                     db.ARCustRemits.Add(arcustomerremitrecord);
                     db.SaveChanges();
-                    returnvalue = "AR MetaData succesfully Updated";
+                    return Request.CreateResponse(HttpStatusCode.OK);
                 }
                 else
                 {
-                    returnvalue = "AR MetaData not Updated as the recordnumber is empty";
+                    throw new HttpResponseException(HttpStatusCode.NotFound);
 
                 }
 
@@ -80,69 +101,87 @@ namespace EDMApiWebRole.Controllers
             catch (Exception ex)
             {
                 DeleteMetadata(recordnumber);
-                returnvalue = "AR Metadata not updated due to exceptions";
-                return returnvalue;
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
             }
 
-            return returnvalue;
+        }*/
 
-        }
-
-        private String InsertCheckIntoBlob(string recordnumber, string filelocation, string checkimagename, bool insertsuccess)
+        [System.Web.Http.ActionName("Image")]
+        public HttpResponseMessage PostARCustRemitImage(string recordnumber, string filepath)
         {
             try
             {
-
-                if (insertsuccess)
+                if (!String.IsNullOrEmpty(recordnumber) && (!String.IsNullOrEmpty(filepath)))
                 {
+                    if (GetBlockBlob(recordnumber).Exists())
+                    {
+                        return Request.CreateResponse(HttpStatusCode.Conflict);
+                    }
+
                     // Retrieve reference to a blob named "blobName".
                     CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
-                    // Create or overwrite the "blobName" blob with contents from a local file.
-                    using (var fileStream = System.IO.File.OpenRead(filelocation))
+
+                    HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(filepath);
+
+                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                     {
-                        // Set content type accordingly
-                        if (checkimagename.ToLower().EndsWith(".pdf"))
+                        if (filepath.ToLower().EndsWith(".pdf"))
                         {
                             blockBlob.Properties.ContentType = "application/pdf";
                         }
-                        else if (checkimagename.ToLower().EndsWith(".tif"))
+                        else if (filepath.ToLower().EndsWith(".tif"))
                         {
                             blockBlob.Properties.ContentType = "image/tiff";
                         }
-                        //Upload the image
-                        blockBlob.UploadFromStream(fileStream);
+                        else if (filepath.ToLower().EndsWith(".png"))
+                        {
+                            blockBlob.Properties.ContentType = "image/png";
+                        }
+                        else if (filepath.ToLower().EndsWith(".jpg"))
+                        {
+                            blockBlob.Properties.ContentType = "image/jpeg";
+                        }
+
+                        blockBlob.UploadFromStream(response.GetResponseStream());
                     }
 
-                    return "AR Customer Remit Image successfully saved";
+                    return Request.CreateResponse(HttpStatusCode.Created);
                 }
                 else
                 {
-                    return "AR Customer Remit Image not Saved due to errors in Metadata";
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
+            }
+
+        }
+
+
+        [System.Web.Http.ActionName("Image")]
+        public HttpResponseMessage DeleteImage(string recordnumber)
+        {
+            try
+            {
+                if (!String.IsNullOrEmpty(recordnumber) && GetBlockBlob(recordnumber).Exists())
+                {
+                    CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
+                    blockBlob.Delete();
+                    return Request.CreateResponse(HttpStatusCode.OK);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+
                 }
             }
             catch (Exception ex)
             {
-                DeleteMetadata(recordnumber);
-                DeleteImage(recordnumber);
-                return "AR Customer Remit Image and Metadata not saved due to exceptions";
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
             }
-
-        }
-
-        private void DeleteMetadata(string recordnumber)
-        {
-            if (!String.IsNullOrEmpty(db.ARCustRemits.Single(x => x.Record_Number == recordnumber).Record_Number))
-            {
-                db.ARCustRemits.Remove(db.ARCustRemits.Single(x => x.Record_Number == recordnumber));
-                db.SaveChanges();
-            }
-
-        }
-
-        private void DeleteImage(string recordnumber)
-        {
-            CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
-            blockBlob.Delete();
 
         }
 
