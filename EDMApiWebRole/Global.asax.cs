@@ -22,6 +22,9 @@ namespace EDMApiWebRole
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
+
+            var config = GlobalConfiguration.Configuration;
+            config.Filters.Add(new TokenValidationAttribute());
         }
     }
 }
