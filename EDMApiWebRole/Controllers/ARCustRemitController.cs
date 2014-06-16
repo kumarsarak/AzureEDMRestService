@@ -33,7 +33,7 @@ namespace EDMApiWebRole.Controllers
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                    return Request.CreateResponse(HttpStatusCode.BadRequest);
                 }
                 
             }
@@ -57,7 +57,14 @@ namespace EDMApiWebRole.Controllers
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                    if (String.IsNullOrEmpty(recordnumber))
+                    {
+                        return Request.CreateResponse(HttpStatusCode.BadRequest);
+                    }
+                    else
+                    {
+                        return Request.CreateResponse(HttpStatusCode.NotFound);
+                    }
 
                 }
             }
@@ -149,7 +156,7 @@ namespace EDMApiWebRole.Controllers
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                    return Request.CreateResponse(HttpStatusCode.BadRequest);
                 }
 
             }
@@ -174,7 +181,14 @@ namespace EDMApiWebRole.Controllers
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                    if (String.IsNullOrEmpty(recordnumber))
+                    {
+                        return Request.CreateResponse(HttpStatusCode.BadRequest);
+                    }
+                    else
+                    {
+                        return Request.CreateResponse(HttpStatusCode.NotFound);
+                    }
 
                 }
             }
