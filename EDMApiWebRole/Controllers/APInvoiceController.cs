@@ -79,23 +79,24 @@ namespace EDMApiWebRole.Controllers
         {
             try
             {
-                if (!String.IsNullOrEmpty(recordnumber) && db.APInvoices.Single(x => x.Record_Number == recordnumber) != null)
+                if (!String.IsNullOrEmpty(recordnumber))
                 {
-                    db.APInvoices.Remove(db.APInvoices.Single(x => x.Record_Number == recordnumber));
-                    db.SaveChanges();
-                    return Request.CreateResponse(HttpStatusCode.OK);
-                }
-                else
-                {
-                    if (String.IsNullOrEmpty(recordnumber))
+                    var apinvoices = from m in db.APInvoices where (m.Record_Number == recordnumber) select m;
+                    if (apinvoices.Count() > 0)
                     {
-                        return Request.CreateResponse(HttpStatusCode.BadRequest);
+                        db.APInvoices.Remove(db.APInvoices.Single(x => x.Record_Number == recordnumber));
+                        db.SaveChanges();
+                        return Request.CreateResponse(HttpStatusCode.OK);
                     }
                     else
                     {
                         return Request.CreateResponse(HttpStatusCode.NotFound);
                     }
+                }
+                else
+                {
 
+                    return Request.CreateResponse(HttpStatusCode.BadRequest);
                 }
             }
             catch (Exception ex)

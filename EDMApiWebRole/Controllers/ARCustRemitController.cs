@@ -49,25 +49,27 @@ namespace EDMApiWebRole.Controllers
         {
             try
             {
-                if (!String.IsNullOrEmpty(recordnumber) && db.ARCustRemits.Single(x => x.Record_Number == recordnumber) != null)
+                if (!String.IsNullOrEmpty(recordnumber)) 
                 {
-                    db.ARCustRemits.Remove(db.ARCustRemits.Single(x => x.Record_Number == recordnumber));
-                    db.SaveChanges();
-                    return Request.CreateResponse(HttpStatusCode.OK);
-                }
-                else
-                {
-                    if (String.IsNullOrEmpty(recordnumber))
+                    var arcustremits = from m in db.ARCustRemits where (m.Record_Number == recordnumber) select m;
+                    if (arcustremits.Count() > 0)
                     {
-                        return Request.CreateResponse(HttpStatusCode.BadRequest);
+                        db.ARCustRemits.Remove(db.ARCustRemits.Single(x => x.Record_Number == recordnumber));
+                        db.SaveChanges();
+                        return Request.CreateResponse(HttpStatusCode.OK);
                     }
                     else
                     {
                         return Request.CreateResponse(HttpStatusCode.NotFound);
                     }
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest);
 
                 }
             }
+
             catch (Exception ex)
             {
                 throw new HttpResponseException(HttpStatusCode.InternalServerError);
