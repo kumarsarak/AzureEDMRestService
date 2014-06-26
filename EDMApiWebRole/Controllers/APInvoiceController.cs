@@ -142,44 +142,42 @@ namespace EDMApiWebRole.Controllers
         }*/
 
         [System.Web.Http.ActionName("Image")]
-        public HttpResponseMessage PostAPInvoiceImage(string recordnumber, string filepath)
+        public HttpResponseMessage PostAPInvoiceImage(string recordnumber, string fileformat)
         {
             try
             {
-                if (!String.IsNullOrEmpty(recordnumber) && (!String.IsNullOrEmpty(filepath)))
+                if (!String.IsNullOrEmpty(recordnumber))
                 {
-                    if (GetBlockBlob(recordnumber).Exists())
+                    /*if (GetBlockBlob(recordnumber).Exists())
                     {
                         return Request.CreateResponse(HttpStatusCode.Conflict);
-                    }
+                    }*/
 
                     // Retrieve reference to a blob named "blobName".
                     CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
+                    HttpContent requestContent = Request.Content;
+                    var streamimage = requestContent.ReadAsStreamAsync().Result;
 
-                    HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(filepath);
 
-                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                    if (fileformat.ToLower().Contains("pdf"))
                     {
-                        if (filepath.ToLower().EndsWith(".pdf"))
-                        {
-                            blockBlob.Properties.ContentType = "application/pdf";
-                        }
-                        else if (filepath.ToLower().EndsWith(".tif"))
-                        {
-                            blockBlob.Properties.ContentType = "image/tiff";
-                        }
-                        else if (filepath.ToLower().EndsWith(".png"))
-                        {
-                            blockBlob.Properties.ContentType = "image/png";
-                        }
-                        else if (filepath.ToLower().EndsWith(".jpg"))
-                        {
-                            blockBlob.Properties.ContentType = "image/jpeg";
-                        }
-
-                        blockBlob.UploadFromStream(response.GetResponseStream());
+                        blockBlob.Properties.ContentType = "application/pdf";
+                    }
+                    else if (fileformat.ToLower().Contains("tif"))
+                    {
+                        blockBlob.Properties.ContentType = "image/tiff";
+                    }
+                    else if (fileformat.ToLower().Contains("png"))
+                    {
+                        blockBlob.Properties.ContentType = "image/png";
+                    }
+                    else if (fileformat.ToLower().Contains("jpg"))
+                    {
+                        blockBlob.Properties.ContentType = "image/jpeg";
                     }
 
+
+                    blockBlob.UploadFromStream(streamimage);
                     return Request.CreateResponse(HttpStatusCode.Created);
                 }
                 else
@@ -222,7 +220,14 @@ namespace EDMApiWebRole.Controllers
             }
             catch (Exception ex)
             {
-                throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                if (ex.Message.Contains("Microsoft.Data.Services.Client"))
+                {
+                    throw new HttpResponseException(HttpStatusCode.NotFound);
+                }
+                else
+                {
+                    throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                }
             }
 
         }
