@@ -10,6 +10,8 @@ using System.Diagnostics;
 using System.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using System.Web.Mvc.Async;
+using System.Threading.Tasks;
 
 namespace EDMApiWebRole.Controllers
 {
@@ -115,18 +117,13 @@ namespace EDMApiWebRole.Controllers
 
         }*/
 
-        [System.Web.Http.ActionName("Image")]
+      /*  [System.Web.Http.ActionName("Image")]
         public HttpResponseMessage PostARCustRemitImage(string recordnumber, string fileformat)
         {
             try
             {
                 if (!String.IsNullOrEmpty(recordnumber))
                 {
-                    /*if (GetBlockBlob(recordnumber).Exists())
-                    {
-                        return Request.CreateResponse(HttpStatusCode.Conflict);
-                    }*/
-
                     // Retrieve reference to a blob named "blobName".
                     CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
                     HttpContent requestContent = Request.Content;
@@ -165,6 +162,131 @@ namespace EDMApiWebRole.Controllers
                 throw new HttpResponseException(HttpStatusCode.InternalServerError);
             }
 
+        }*/
+
+        [System.Web.Http.ActionName("Image")]
+        public async Task<HttpResponseMessage> PostAPInvoiceImage(string recordnumber, string fileformat)
+        {
+            try
+            {
+                if (!String.IsNullOrEmpty(recordnumber))
+                {
+                    HttpContent requestContent = Request.Content;
+                    using (var streamimage = requestContent.ReadAsStreamAsync())
+                    {
+                        int maxSize = 64 * 1024 * 1024; // 64 MB
+                        if (streamimage.Result.Length >= maxSize)
+                        {
+                            UploadBigImage(requestContent.ReadAsByteArrayAsync().Result, recordnumber, fileformat);
+                        }
+
+                        else
+                        {
+                            await UploadImage(streamimage.Result, recordnumber, fileformat);
+                        }
+                    }
+                    return Request.CreateResponse(HttpStatusCode.Created);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw new HttpResponseException(HttpStatusCode.InternalServerError);
+
+            }
+
+        }
+
+        private async Task UploadImage(System.IO.Stream streamimage, string recordnumber, string fileformat)
+        {
+            try
+            {
+                CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
+                blockBlob.Properties.ContentType = GetBlockBlobContentType(fileformat);
+                await blockBlob.UploadFromStreamAsync(streamimage);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        private void UploadBigImage(byte[] data, string recordnumber, string fileformat)
+        {
+            try
+            {
+                CloudBlockBlob blockBlob = GetBlockBlob(recordnumber);
+                blockBlob.Properties.ContentType = GetBlockBlobContentType(fileformat);
+                int id = 0;
+                int byteslength = data.Length;
+                int bytesread = 0;
+                int index = 0;
+                List<string> blocklist = new List<string>();
+                int numBytesPerChunk = 250 * 1024; //250KB per block
+
+                do
+                {
+                    byte[] buffer = new byte[numBytesPerChunk];
+                    int limit = index + numBytesPerChunk;
+                    for (int loops = 0; index < limit; index++)
+                    {
+                        buffer[loops] = data[index];
+                        loops++;
+                    }
+                    bytesread = index;
+                    string blockIdBase64 = Convert.ToBase64String(System.BitConverter.GetBytes(id));
+
+                    blockBlob.PutBlock(blockIdBase64, new System.IO.MemoryStream(buffer, true), null);
+                    blocklist.Add(blockIdBase64);
+                    id++;
+                } while (byteslength - bytesread > numBytesPerChunk);
+
+
+                int final = byteslength - bytesread;
+                byte[] finalbuffer = new byte[final];
+                for (int loops = 0; index < byteslength; index++)
+                {
+                    finalbuffer[loops] = data[index];
+                    loops++;
+                }
+                string blockId = Convert.ToBase64String(System.BitConverter.GetBytes(id));
+                blockBlob.PutBlock(blockId, new System.IO.MemoryStream(finalbuffer, true), null);
+                blocklist.Add(blockId);
+
+                blockBlob.PutBlockList(blocklist);
+
+
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        private String GetBlockBlobContentType(string fileformat)
+        {
+            if (fileformat.ToLower().Contains("pdf"))
+            {
+                return "application/pdf";
+            }
+            else if (fileformat.ToLower().Contains("tif"))
+            {
+                return "image/tiff";
+            }
+            else if (fileformat.ToLower().Contains("png"))
+            {
+                return "image/png";
+            }
+            else if (fileformat.ToLower().Contains("jpg"))
+            {
+                return "image/jpeg";
+            }
+            return null;
         }
 
 
