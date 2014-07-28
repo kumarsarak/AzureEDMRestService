@@ -53,7 +53,7 @@ namespace EDMApiWebRole.Controllers
         {
             try
             {
-                if (!String.IsNullOrEmpty(recordnumber) && !String.IsNullOrEmpty(invoicenumber))
+                if (!String.IsNullOrEmpty(recordnumber))
                 {
                     if (db.APInvoices.Count(x => x.Record_Number == recordnumber) > 0) { return Request.CreateResponse(HttpStatusCode.Conflict); }
                     var apinvoicerecord = new APInvoice { Record_Number = recordnumber, Invoice_Date = Convert.ToDateTime(invoicedate), Invoice_Number = invoicenumber, Vendor_Number = vendornumber, Vendor_Name = vendorname, PO_Number = ponumber, Invoice_Type_cd = invoicetypecd };
