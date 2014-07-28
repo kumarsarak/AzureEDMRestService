@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <PublishProfile Include="Profiles\devEDMAPI.azurePubxml" />
+    <PublishProfile Include="Profiles\testEDMAPI.azurePubxml" />
     <PublishProfile Include="Profiles\devEDMStaging.azurePubxml" />
     <PublishProfile Include="Profiles\devEDMAPIStaging.azurePubxml" />
   </ItemGroup>
