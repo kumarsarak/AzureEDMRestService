@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="EDMAPI" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2014-01.2.3">
-  <WebRole name="EDMApiWebRole" vmsize="Small">
+  <WebRole name="EDMApiWebRole" vmsize="Large">
     <Sites>
       <Site name="Web">
         <Bindings>
